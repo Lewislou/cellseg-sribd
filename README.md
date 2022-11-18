@@ -10,8 +10,20 @@ Install requirements by
 python -m pip install -r requirements.txt
 ```
 
-## Preprocessing
-The training and tuning data can be downloaded from https://neurips22-cellseg.grand-challenge.org/dataset/
+## Dataset
+The competition training and tuning data can be downloaded from https://neurips22-cellseg.grand-challenge.org/dataset/
+Besides, you can download three publiced data from the following link: 
+Cellpose: https://www.cellpose.org/dataset 
+Omnipose: http://www.cellpose.org/dataset_omnipose
+Sartorius: https://www.kaggle.com/competitions/sartorius-cell-instance-segmentation/overview 
+
+## Automatic cell classification
+You can classify the cells into four classes in this step.
+Put all the images (competition + Cellpose + Omnipose + Sartorius) in one folder (/data/allimages).
+```Run classification code```
+python unsup_classification.py
+```
+
 
 Preprocess dataset with
 
@@ -20,4 +32,6 @@ python pre_process_3class.py
 ```
 
 ## Training
+We divide the whole training process into two parts: 1. Cell classification; 2. Cell segmentation
+
 
