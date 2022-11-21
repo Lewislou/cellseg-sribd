@@ -19,19 +19,32 @@ Sartorius: https://www.kaggle.com/competitions/sartorius-cell-instance-segmentat
 
 ## Automatic cell classification
 You can classify the cells into four classes in this step.
-Put all the images (competition + Cellpose + Omnipose + Sartorius) in one folder (/data/allimages).
-```Run classification code```
-python unsup_classification.py
-```
-
-
-Preprocess dataset with
+Put all the images (competition + Cellpose + Omnipose + Sartorius) in one folder (data/allimages).
+Run classification code:
 
 ```shell
-python pre_process_3class.py
+python unsup_classification.py
 ```
+The results can be stored in data/classification_results/
 
-## Training
-We divide the whole training process into two parts: 1. Cell classification; 2. Cell segmentation
+## CNN-base classification model training
+Using the classified images in data/classification_results/. A resnet18 is trained:
+```shell
+python train_classification.py
+```
+## Segmentation Training
+Pre-training convnext-stardist using all the images (data/allimages).
+```shell
+python train_convnext_stardist.py
+```
+For class 0,1,2 finetune on the classified data (Take class1 as a example):
+```shell
+python finetune_convnext_stardist.py model_dir=(The pretrained convnext-stardist model) data_dir='data/classification_results/class1'
+```
+For class 3 train the convnext-hover from scratch using classified class 3 data.
+python convnext_hover.py data_dir='data/classification_results/class3'
 
+Finally, four segmentation models will be trained.
 
+##Trained models
+The models can be downloaded from this link:
