@@ -43,7 +43,7 @@ python finetune_convnext_stardist.py model_dir=(The pretrained convnext-stardist
 ```
 For class 1 train the convnext-hover from scratch using classified class 3 data.
 ```shell
-python convnext_hover.py data_dir='data/classification_results/class3'
+python train_convnext_hover.py data_dir='data/classification_results/class3'
 ```
 
 Finally, four segmentation models will be trained.
