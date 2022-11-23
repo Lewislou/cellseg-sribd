@@ -61,8 +61,8 @@ Calculate the F-score for evaluation:
 ```shell
 python compute_metric.py --gt_path path_to_labels --seg_path output_path
 ```
-##Results
+## Results
 
-##Acknowledgement
+## Acknowledgement
 We thank for the contributors of public datasets.
 
