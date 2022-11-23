@@ -23,14 +23,14 @@ Put all the images (competition + Cellpose + Omnipose + Sartorius) in one folder
 Run classification code:
 
 ```shell
-python unsup_classification.py
+python classification/unsup_classification.py
 ```
 The results can be stored in data/classification_results/
 
 ## CNN-base classification model training
 Using the classified images in data/classification_results/. A resnet18 is trained:
 ```shell
-python train_classification.py
+python classification/train_classification.py
 ```
 ## Segmentation Training
 Pre-training convnext-stardist using all the images (data/allimages).
