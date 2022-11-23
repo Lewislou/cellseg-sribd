@@ -46,5 +46,23 @@ python convnext_hover.py data_dir='data/classification_results/class3'
 
 Finally, four segmentation models will be trained.
 
-##Trained models
+## Trained models
 The models can be downloaded from this link:
+https://drive.google.com/drive/folders/1MkEOpgmdkg5Yqw6Ng5PoOhtmo9xPPwIj?usp=sharing
+
+## Inference
+The inference process includes classification and segmentation.
+```shell
+python predict.py -i input_path -o output_path --model_path './models' 
+```
+
+## Evaluation
+Calculate the F-score for evaluation:
+```shell
+python compute_metric.py --gt_path path_to_labels --seg_path output_path
+```
+##Results
+
+##Acknowledgement
+We thank for the contributors of public datasets.
+
