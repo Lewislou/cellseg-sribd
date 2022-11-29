@@ -63,7 +63,9 @@ Calculate the F-score for evaluation:
 ```shell
 python compute_metric.py --gt_path path_to_labels --seg_path output_path
 ```
+
 ## Results
+The tuning set F1 score of our method is 0.8795.
 
 ## Acknowledgement
 We thank for the contributors of public datasets.
