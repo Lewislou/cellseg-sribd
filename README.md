@@ -41,7 +41,7 @@ For class 0,2,3 finetune on the classified data (Take class1 as a example):
 ```shell
 python finetune_convnext_stardist.py model_dir=(The pretrained convnext-stardist model) data_dir='data/classification_results/class1'
 ```
-For class 1 train the convnext-hover from scratch using classified class 3 data.
+For class 1 train the convnext-hover from scratch using classified class 1 data.
 ```shell
 python train_convnext_hover.py data_dir='data/classification_results/class3'
 ```
