@@ -60,8 +60,7 @@ import shutil
 from skimage import io
 from skimage.color import gray2rgb
 
-from models.unetr2d import UNETR2D
-from models.swin_unetr import SwinUNETR
+
 from models.flexible_unet_convext import FlexibleUNet_hv
 
 from utils import cropping_center, gen_targets, xentropy_loss, dice_loss, mse_loss, msge_loss
@@ -219,7 +218,7 @@ def main():
     # args = Args('/data2/yuxinyi/stardist_pytorch/dataset/class3_seed2', 2022, 4, 'efficientunet', 512, 256, 16, 600,
     #             1, 10, 1e-4, '4', 32)
     modelname = 'star-hover'
-    strategy = 'aug256_out256'
+    strategy = 'aug512_out512'
     parser = argparse.ArgumentParser("Baseline for Microscopy image segmentation")
     # Dataset parameters
     parser.add_argument(
@@ -237,7 +236,7 @@ def main():
         "--model_name", default="efficientunet", help="select mode: unet, unetr, swinunetr"
     )
     parser.add_argument("--input_size", default=512, type=int, help="after rand crop")
-    parser.add_argument("--mask_size", default=256, type=int, help="after gen target")
+    parser.add_argument("--mask_size", default=512, type=int, help="after gen target")
     # Training parameters
     parser.add_argument("--batch_size", default=12, type=int, help="Batch size per GPU")
     parser.add_argument("--max_epochs", default=800, type=int)
@@ -258,9 +257,7 @@ def main():
     model_path = join(work_dir)
     rm_n_mkdir(model_path)
     run_id = datetime.now().strftime("%Y%m%d-%H%M")
-    shutil.copyfile(
-        __file__, join(model_path, run_id + "_" + os.path.basename(__file__))
-    )
+
     img_path = join(args.data_path, "Train/Images_3channels")
     gt_path = join(args.data_path, "Train/tif")
     val_img_path = join(args.data_path, "Test/Images_3channels")
@@ -389,7 +386,7 @@ def main():
     # create a validation data loader
     # val_ds = monai.data.Dataset(data=val_files, transform=val_transforms)
     val_ds = HoverDataset(data=val_files, transform=val_transforms, mask_shape=(args.mask_size, args.mask_size))
-    val_loader = DataLoader(val_ds, batch_size=16, shuffle=False, num_workers=4)
+    val_loader = DataLoader(val_ds, batch_size=1, shuffle=False, num_workers=4)
 
     model = FlexibleUNet_hv(
         in_channels=3,

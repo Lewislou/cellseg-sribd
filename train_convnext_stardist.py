@@ -48,10 +48,8 @@ import matplotlib.pyplot as plt
 from datetime import datetime
 import shutil
 import tqdm
-from models.unetr2d import UNETR2D
-from models.swin_unetr import SwinUNETR
-from models.flexible_unet import FlexibleUNet 
-from models.flexible_unet_convext import FlexibleUNetConvext
+
+from models.flexible_unet_convnext import FlexibleUNet_star
 print("Successfully imported all requirements!")
 torch.backends.cudnn.enabled =False
 
@@ -73,7 +71,7 @@ def main():
     parser.add_argument("--local_rank", type=int)
     # Model parameters
     parser.add_argument(
-        "--model_name", default="efficientunet", help="select mode: unet, unetr, swinunetr"
+        "--model_name", default="stardist", help="select mode: unet, unetr, swinunetr"
     )
     parser.add_argument("--num_class", default=3, type=int, help="segmentation classes")
     parser.add_argument(
@@ -99,20 +97,18 @@ def main():
     run_id = datetime.now().strftime("%Y%m%d-%H%M")
     # This must be change every runing time ! ! ! ! ! ! ! ! ! ! !
     model_file = "models/flexible_unet_convext.py"
-    shutil.copyfile(
-        __file__, join(model_path, os.path.basename(__file__))
-    )
+
     shutil.copyfile(
         model_file, join(model_path, os.path.basename(model_file))
     )
-    all_image_path = '/data/louwei/nips_comp/train_cellpose_multi0/'
-    all_img_path = join(all_image_path, "train/images")
-    all_gt_path = join(all_image_path, "train/tif")    
+    #all_image_path = '/data/louwei/nips_comp/train_cellpose_multi0/'
+    #all_img_path = join(all_image_path, "train/images")
+    #all_gt_path = join(all_image_path, "train/tif")    
     
-    all_img_names = sorted(os.listdir(all_img_path))
-    all_gt_names = [img_name.split(".")[0] + ".tif" for img_name in all_img_names]
-    all_img_files = [join(all_img_path, all_img_names[i]) for i in range(len(all_img_names))]
-    all_gt_files = [join(all_gt_path, all_gt_names[i]) for i in range(len(all_img_names))]    
+    #all_img_names = sorted(os.listdir(all_img_path))
+    #all_gt_names = [img_name.split(".")[0] + ".tif" for img_name in all_img_names]
+    #all_img_files = [join(all_img_path, all_img_names[i]) for i in range(len(all_img_names))]
+    #all_gt_files = [join(all_gt_path, all_gt_names[i]) for i in range(len(all_img_names))]    
     img_path = join(args.data_path, "train/images")
     gt_path = join(args.data_path, "train/tif")
     val_img_path = join(args.data_path, "test/images")
@@ -121,8 +117,8 @@ def main():
     gt_names = [img_name.split(".")[0] + ".tif" for img_name in img_names]
     train_img_files = [join(img_path, img_names[i]) for i in range(len(img_names))]
     train_gt_files = [join(gt_path, gt_names[i]) for i in range(len(img_names))]
-    cat_img_files = train_img_files + all_img_files
-    cat_gt_files = train_gt_files + all_gt_files
+    cat_img_files = train_img_files 
+    cat_gt_files = train_gt_files 
     img_num = len(img_names)
     val_frac = 0.1
     val_img_names = sorted(os.listdir(val_img_path))
@@ -226,32 +222,16 @@ def main():
     post_gt = Compose([EnsureType(), AsDiscrete(to_onehot=None)])
     # create UNet, DiceLoss and Adam optimizer
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    if args.model_name.lower() == "unet":
-        model = monai.networks.nets.UNet(
-            spatial_dims=2,
-            in_channels=3,
-            out_channels=args.num_class,
-            channels=(16, 32, 64, 128, 256),
-            strides=(2, 2, 2, 2),
-            num_res_units=2,
-        ).to(device)
 
-    if args.model_name.lower() == "efficientunet":
-        model = FlexibleUNetConvext(
+    if args.model_name.lower() == "stardist":
+        model = FlexibleUNet_star(
             in_channels=3,
             out_channels=n_rays+1,
             backbone='convnext_small',
             pretrained=True,
         ).to(device)
     
-    if args.model_name.lower() == "swinunetr":
-        model = SwinUNETR(
-            img_size=(args.input_size, args.input_size),
-            in_channels=3,
-            out_channels=n_rays+1,
-            feature_size=24,  # should be divisible by 12
-            spatial_dims=2,
-        ).to(device)
+
   
     #loss_masked_dice = monai.losses.DiceCELoss(softmax=True)
     loss_dice = monai.losses.DiceLoss(squared_pred=True,jaccard=True)

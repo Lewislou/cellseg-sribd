@@ -21,7 +21,7 @@ from monai.networks.nets import EfficientNetBNFeatures
 from monai.networks.nets.basic_unet import UpCat
 from monai.utils import InterpolateMode
 
-__all__ = ["FlexibleUNet_star"]
+__all__ = ["FlexibleUNet"]
 
 encoder_feature_channel = {
     "efficientnet-b0": (16, 24, 40, 112, 320),
@@ -203,7 +203,7 @@ class SegmentationHead(nn.Sequential):
         super().__init__(conv_layer, up_layer, act_layer)
 
 
-class FlexibleUNet_star(nn.Module):
+class FlexibleUNetConvext(nn.Module):
     """
     A flexible implementation of UNet-like encoder-decoder architecture.
     """
@@ -214,8 +214,7 @@ class FlexibleUNet_star(nn.Module):
         out_channels: int,
         backbone: str,
         pretrained: bool = False,
-        decoder_channels: Tuple = (256, 128, 64, 32),
-        #decoder_channels: Tuple = (1024, 512, 256, 128),
+        decoder_channels: Tuple = (1024, 512, 256, 128),
         spatial_dims: int = 2,
         norm: Union[str, tuple] = ("batch", {"eps": 1e-3, "momentum": 0.1}),
         act: Union[str, tuple] = ("relu", {"inplace": True}),
@@ -224,8 +223,6 @@ class FlexibleUNet_star(nn.Module):
         upsample: str = "nontrainable",
         interp_mode: str = "nearest",
         is_pad: bool = True,
-        n_rays: int = 32,
-        prob_out_channels: int = 1,
     ) -> None:
         """
         A flexible implement of UNet, in which the backbone/encoder can be replaced with
@@ -272,8 +269,18 @@ class FlexibleUNet_star(nn.Module):
         model_name = backbone
         encoder_channels = _get_encoder_channels_by_backbone(backbone, in_channels)
 
-        self.encoder = convnext.convnext_small(pretrained=False,in_22k=True)
-
+        self.encoder = convnext.convnext_small(pretrained=True,in_22k=True)
+        # self.encoder = VAN(embed_dims=[64, 128, 320, 512],
+        #  depths=[3, 3, 12, 3],
+        #  init_cfg=dict(type='Pretrained', checkpoint='pretrained/van_b2.pth'),
+        #  norm_cfg=dict(type='BN', requires_grad=True)
+        #  )
+        # self.encoder = VAN(embed_dims=[64, 128, 320, 512],
+        #  depths=[2, 2, 4, 2],
+        #  init_cfg=dict(type='Pretrained', checkpoint='pretrained/van_b1.pth'),
+        #  norm_cfg=dict(type='BN', requires_grad=True)
+        #  )
+        # self.encoder.init_weights()
         self.decoder = UNetDecoder(
             spatial_dims=spatial_dims,
             encoder_channels=encoder_channels,
@@ -291,7 +298,7 @@ class FlexibleUNet_star(nn.Module):
         self.dist_head = SegmentationHead(
             spatial_dims=spatial_dims,
             in_channels=decoder_channels[-1],
-            out_channels=n_rays,
+            out_channels=64,
             kernel_size=1,
             act='relu',
             scale_factor = 2,
@@ -299,7 +306,7 @@ class FlexibleUNet_star(nn.Module):
         self.prob_head = SegmentationHead(
             spatial_dims=spatial_dims,
             in_channels=decoder_channels[-1],
-            out_channels=prob_out_channels,
+            out_channels=1,
             kernel_size=1,
             act='sigmoid',
             scale_factor = 2,
@@ -322,13 +329,9 @@ class FlexibleUNet_star(nn.Module):
         decoder_out = self.decoder(enc_out)
 
         dist = self.dist_head(decoder_out)
-        #print(dist.shape)
         prob = self.prob_head(decoder_out)
 
         return dist,prob
-        
-
-
 class FlexibleUNet_hv(nn.Module):
     """
     A flexible implementation of UNet-like encoder-decoder architecture.
@@ -396,7 +399,7 @@ class FlexibleUNet_hv(nn.Module):
         self.spatial_dims = spatial_dims
         model_name = backbone
         encoder_channels = _get_encoder_channels_by_backbone(backbone, in_channels)
-        self.encoder = convnext.convnext_small(pretrained=False,in_22k=True)
+        self.encoder = convnext.convnext_small(pretrained=True,in_22k=True)
         self.decoder = UNetDecoder(
             spatial_dims=spatial_dims,
             encoder_channels=encoder_channels,

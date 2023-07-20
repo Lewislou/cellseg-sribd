@@ -13,7 +13,7 @@ from typing import List, Optional, Sequence, Tuple, Union
 
 import torch
 from torch import nn
-from . import convnext
+
 from monai.networks.blocks import UpSample
 from monai.networks.layers.factories import Conv
 from monai.networks.layers.utils import get_act_layer
@@ -21,7 +21,7 @@ from monai.networks.nets import EfficientNetBNFeatures
 from monai.networks.nets.basic_unet import UpCat
 from monai.utils import InterpolateMode
 
-__all__ = ["FlexibleUNet_star"]
+__all__ = ["FlexibleUNet"]
 
 encoder_feature_channel = {
     "efficientnet-b0": (16, 24, 40, 112, 320),
@@ -34,10 +34,6 @@ encoder_feature_channel = {
     "efficientnet-b7": (32, 48, 80, 224, 640),
     "efficientnet-b8": (32, 56, 88, 248, 704),
     "efficientnet-l2": (72, 104, 176, 480, 1376),
-    "convnext_small": (96, 192, 384, 768),
-    "convnext_base": (128, 256, 512, 1024),
-    "van_b2": (64, 128, 320, 512),
-    "van_b1": (64, 128, 320, 512),
 }
 
 
@@ -134,7 +130,7 @@ class UNetDecoder(nn.Module):
             )
         self.blocks = nn.ModuleList(blocks)
 
-    def forward(self, features: List[torch.Tensor], skip_connect: int = 3):
+    def forward(self, features: List[torch.Tensor], skip_connect: int = 4):
         skips = features[:-1][::-1]
         features = features[1:][::-1]
 
@@ -179,15 +175,6 @@ class SegmentationHead(nn.Sequential):
             in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size, padding=kernel_size // 2
         )
         up_layer: nn.Module = nn.Identity()
-        # if scale_factor > 1.0:
-        #     up_layer = UpSample(
-        #         in_channels=out_channels,
-        #         spatial_dims=spatial_dims,
-        #         scale_factor=scale_factor,
-        #         mode="deconv",
-        #         pre_conv=None,
-        #         interp_mode=InterpolateMode.LINEAR,
-        #     )
         if scale_factor > 1.0:
             up_layer = UpSample(
                 spatial_dims=spatial_dims,
@@ -203,7 +190,7 @@ class SegmentationHead(nn.Sequential):
         super().__init__(conv_layer, up_layer, act_layer)
 
 
-class FlexibleUNet_star(nn.Module):
+class FlexibleUNet(nn.Module):
     """
     A flexible implementation of UNet-like encoder-decoder architecture.
     """
@@ -214,8 +201,7 @@ class FlexibleUNet_star(nn.Module):
         out_channels: int,
         backbone: str,
         pretrained: bool = False,
-        decoder_channels: Tuple = (256, 128, 64, 32),
-        #decoder_channels: Tuple = (1024, 512, 256, 128),
+        decoder_channels: Tuple = (256, 128, 64, 32, 16),
         spatial_dims: int = 2,
         norm: Union[str, tuple] = ("batch", {"eps": 1e-3, "momentum": 0.1}),
         act: Union[str, tuple] = ("relu", {"inplace": True}),
@@ -224,8 +210,6 @@ class FlexibleUNet_star(nn.Module):
         upsample: str = "nontrainable",
         interp_mode: str = "nearest",
         is_pad: bool = True,
-        n_rays: int = 32,
-        prob_out_channels: int = 1,
     ) -> None:
         """
         A flexible implement of UNet, in which the backbone/encoder can be replaced with
@@ -271,9 +255,14 @@ class FlexibleUNet_star(nn.Module):
         self.spatial_dims = spatial_dims
         model_name = backbone
         encoder_channels = _get_encoder_channels_by_backbone(backbone, in_channels)
-
-        self.encoder = convnext.convnext_small(pretrained=False,in_22k=True)
-
+        self.encoder = EfficientNetBNFeatures(
+            model_name=model_name,
+            pretrained=pretrained,
+            in_channels=in_channels,
+            spatial_dims=spatial_dims,
+            norm=norm,
+            adv_prop=adv_prop,
+        )
         self.decoder = UNetDecoder(
             spatial_dims=spatial_dims,
             encoder_channels=encoder_channels,
@@ -291,141 +280,16 @@ class FlexibleUNet_star(nn.Module):
         self.dist_head = SegmentationHead(
             spatial_dims=spatial_dims,
             in_channels=decoder_channels[-1],
-            out_channels=n_rays,
+            out_channels=32,
             kernel_size=1,
             act='relu',
-            scale_factor = 2,
         )
         self.prob_head = SegmentationHead(
             spatial_dims=spatial_dims,
             in_channels=decoder_channels[-1],
-            out_channels=prob_out_channels,
+            out_channels=1,
             kernel_size=1,
             act='sigmoid',
-            scale_factor = 2,
-        )
-
-    def forward(self, inputs: torch.Tensor):
-        """
-        Do a typical encoder-decoder-header inference.
-
-        Args:
-            inputs: input should have spatially N dimensions ``(Batch, in_channels, dim_0[, dim_1, ..., dim_N])``,
-                N is defined by `dimensions`.
-
-        Returns:
-            A torch Tensor of "raw" predictions in shape ``(Batch, out_channels, dim_0[, dim_1, ..., dim_N])``.
-
-        """
-        x = inputs
-        enc_out = self.encoder(x)
-        decoder_out = self.decoder(enc_out)
-
-        dist = self.dist_head(decoder_out)
-        #print(dist.shape)
-        prob = self.prob_head(decoder_out)
-
-        return dist,prob
-        
-
-
-class FlexibleUNet_hv(nn.Module):
-    """
-    A flexible implementation of UNet-like encoder-decoder architecture.
-    """
-
-    def __init__(
-        self,
-        in_channels: int,
-        out_channels: int,
-        backbone: str,
-        pretrained: bool = False,
-        decoder_channels: Tuple = (1024, 512, 256, 128),
-        spatial_dims: int = 2,
-        norm: Union[str, tuple] = ("batch", {"eps": 1e-3, "momentum": 0.1}),
-        act: Union[str, tuple] = ("relu", {"inplace": True}),
-        dropout: Union[float, tuple] = 0.0,
-        decoder_bias: bool = False,
-        upsample: str = "nontrainable",
-        interp_mode: str = "nearest",
-        is_pad: bool = True,
-        n_rays: int = 32,
-        prob_out_channels: int = 1,
-    ) -> None:
-        """
-        A flexible implement of UNet, in which the backbone/encoder can be replaced with
-        any efficient network. Currently the input must have a 2 or 3 spatial dimension
-        and the spatial size of each dimension must be a multiple of 32 if is pad parameter
-        is False
-
-        Args:
-            in_channels: number of input channels.
-            out_channels: number of output channels.
-            backbone: name of backbones to initialize, only support efficientnet right now,
-                can be from [efficientnet-b0,..., efficientnet-b8, efficientnet-l2].
-            pretrained: whether to initialize pretrained ImageNet weights, only available
-                for spatial_dims=2 and batch norm is used, default to False.
-            decoder_channels: number of output channels for all feature maps in decoder.
-                `len(decoder_channels)` should equal to `len(encoder_channels) - 1`,default
-                to (256, 128, 64, 32, 16).
-            spatial_dims: number of spatial dimensions, default to 2.
-            norm: normalization type and arguments, default to ("batch", {"eps": 1e-3,
-                "momentum": 0.1}).
-            act: activation type and arguments, default to ("relu", {"inplace": True}).
-            dropout: dropout ratio, default to 0.0.
-            decoder_bias: whether to have a bias term in decoder's convolution blocks.
-            upsample: upsampling mode, available options are``"deconv"``, ``"pixelshuffle"``,
-                ``"nontrainable"``.
-            interp_mode: {``"nearest"``, ``"linear"``, ``"bilinear"``, ``"bicubic"``, ``"trilinear"``}
-                Only used in the "nontrainable" mode.
-            is_pad: whether to pad upsampling features to fit features from encoder. Default to True.
-                If this parameter is set to "True", the spatial dim of network input can be arbitary
-                size, which is not supported by TensorRT. Otherwise, it must be a multiple of 32.
-        """
-        super().__init__()
-
-        if backbone not in encoder_feature_channel:
-            raise ValueError(f"invalid model_name {backbone} found, must be one of {encoder_feature_channel.keys()}.")
-
-        if spatial_dims not in (2, 3):
-            raise ValueError("spatial_dims can only be 2 or 3.")
-
-        adv_prop = "ap" in backbone
-
-        self.backbone = backbone
-        self.spatial_dims = spatial_dims
-        model_name = backbone
-        encoder_channels = _get_encoder_channels_by_backbone(backbone, in_channels)
-        self.encoder = convnext.convnext_small(pretrained=False,in_22k=True)
-        self.decoder = UNetDecoder(
-            spatial_dims=spatial_dims,
-            encoder_channels=encoder_channels,
-            decoder_channels=decoder_channels,
-            act=act,
-            norm=norm,
-            dropout=dropout,
-            bias=decoder_bias,
-            upsample=upsample,
-            interp_mode=interp_mode,
-            pre_conv=None,
-            align_corners=None,
-            is_pad=is_pad,
-        )
-        self.dist_head = SegmentationHead(
-            spatial_dims=spatial_dims,
-            in_channels=decoder_channels[-1],
-            out_channels=n_rays,
-            kernel_size=1,
-            act=None,
-            scale_factor = 2,
-        )
-        self.prob_head = SegmentationHead(
-            spatial_dims=spatial_dims,
-            in_channels=decoder_channels[-1],
-            out_channels=prob_out_channels,
-            kernel_size=1,
-            act='sigmoid',
-            scale_factor = 2,
         )
 
     def forward(self, inputs: torch.Tensor):
