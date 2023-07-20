@@ -53,8 +53,9 @@ The models can be downloaded from this link:
 https://drive.google.com/drive/folders/1MkEOpgmdkg5Yqw6Ng5PoOhtmo9xPPwIj?usp=sharing
 
 Docker environment:
-
-
+```shell
+docker push lewislou/sribd-cellseg:01
+```
 ## Inference
 The inference process includes classification and segmentation.
 ```shell
