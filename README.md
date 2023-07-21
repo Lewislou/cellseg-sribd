@@ -59,7 +59,9 @@ The models can be downloaded from this link:
 https://drive.google.com/drive/folders/1MkEOpgmdkg5Yqw6Ng5PoOhtmo9xPPwIj?usp=sharing
 
 Docker environment:
-
+```shell
+docker push lewislou/sribd-cellseg:tagname
+```
 
 ## Inference
 The inference process includes classification and segmentation.
@@ -82,5 +84,5 @@ The notebook codes are in the folder fintune_on_newdataset/finetune.py
 The tuning set F1 score of our method is 0.8795. The rank running time of our method on all the 101 cases in the tuning set is zero in our local
 workstation. 
 ## Acknowledgement
-We thank the contributors of public datasets and the organizers of the competition.
+We thank the contributors of public datasets and the organizers of the competition. We thank for the support from the Shenzhen Research Institute of Big Data (SRIBD, http://www.sribd.cn/)
 
