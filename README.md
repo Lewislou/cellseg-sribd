@@ -76,5 +76,5 @@ The notebook codes are in the folder fintune_on_newdataset/finetune.py
 The tuning set F1 score of our method is 0.8795. The rank running time of our method on all the 101 cases in the tuning set is zero in our local
 workstation. 
 ## Acknowledgement
-We thank for the contributors of public datasets.
+We thank the contributors of public datasets and the organizers of the competition.
 
